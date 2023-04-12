@@ -22,14 +22,26 @@ class Url:
 
 @app.route('/', methods=['POST'])
 def create():
+    # get the url string from the request
     value = request.json['value']
+
     # check if the value matches a URL format
     if validators.url(value):
         url = Url(value=value)
         db.set(url.hash, url.value)
+        
+        # return the hash value
         return jsonify({'value': url.hash}), 201
     else:
         return jsonify({'error': 'Invalid URL format'}), 400
+
+
+@app.route('/', methods=['GET'])
+def get_all():
+    output = []
+    for key in db.scan_iter():
+        output.append({'value': db.get(key).decode('utf-8'), 'hash': key.decode('utf-8')})
+    return jsonify({'urls': output}), 200
 
 
 @app.route('/<hash>', methods=['GET'])
@@ -37,7 +49,7 @@ def get(hash):
     value = db.get(hash)
     if not value:
         return jsonify({'message': 'URL not found'}), 404
-    return jsonify({'value': value.decode('utf-8'), 'hash': hash})
+    return jsonify({'value': value.decode('utf-8'), 'hash': hash}), 301
 
 
 @app.route('/<hash>', methods=['PUT'])
@@ -64,12 +76,11 @@ def delete(hash):
     return '', 204
 
 
-@app.route('/', methods=['GET'])
-def get_all():
-    output = []
-    for key in db.scan_iter():
-        output.append({'value': db.get(key).decode('utf-8'), 'hash': key.decode('utf-8')})
-    return jsonify({'urls': output})
+@app.route('/', methods=['DELETE'])
+def delete_all():
+    db.flushdb()
+    return '', 204
+
 
 if __name__ == '__main__':
     app.run(debug=True)
