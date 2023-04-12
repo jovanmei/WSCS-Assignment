@@ -11,6 +11,14 @@ app.config['REDIS_URL'] = 'redis://localhost:6379/0'
 # Connect to Redis database
 db = redis.Redis.from_url(app.config['REDIS_URL'])
 
+regex = re.compile(
+        r'^(?:http|ftp)s?://' # http:// or https://
+        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|' #domain...
+        r'localhost|' #localhost...
+        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})' # ...or ip
+        r'(?::\d+)?' # optional port
+        r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+
 # Define Url class to store URLs and their hashes
 class Url:
     def __init__(self, value):
@@ -30,14 +38,16 @@ def create():
     value = request.json['value']
 
     # Check if the value matches a URL format
-    if validators.url(value):
-        url = Url(value=value)
-        db.set(url.hash, url.value)
-
-        # Return the hash value
-        return jsonify({'value': url.hash}), 201
-    else:
+    if not re.match(regex, value):
         return jsonify({'error': 'Invalid URL format'}), 400
+    # if validators.url(value):
+    url = Url(value=value)
+    db.set(url.hash, url.value)
+
+    # Return the hash value
+    return jsonify({'value': url.hash}), 201
+    # else:
+    #     return jsonify({'error': 'Invalid URL format'}), 400
 
 # Get all shortened URLs
 @app.route('/', methods=['GET'])
@@ -72,15 +82,17 @@ def update(hash):
     new_value = request.json['value']
 
     # Check if the new URL is valid
-    if validators.url(new_value):
-        new_hash = Url(value=new_value).hash
-        db.delete(hash)
-        db.set(new_hash, new_value)
-
-        # Return the updated URL and its new hash
-        return jsonify({'value': new_value, 'hash': new_hash})
-    else:
+    if not re.match(regex, new_value):
         return jsonify({'error': 'Invalid URL format'}), 400
+    # if validators.url(new_value):
+    new_hash = Url(value=new_value).hash
+    db.delete(hash)
+    db.set(new_hash, new_value)
+
+    # Return the updated URL and its new hash
+    return jsonify({'value': new_value, 'hash': new_hash})
+    # else:
+    #     return jsonify({'error': 'Invalid URL format'}), 400
 
 # Delete a shortened URL by its hash
 @app.route('/<hash>', methods=['DELETE'])

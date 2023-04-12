@@ -22,3 +22,5 @@ $ redis-server
 ```
 python3 Urlkv.py
 ```
+
+The regex expression for URL Validation is from https://github.com/django/django/blob/stable/1.3.x/django/core/validators.py#L45
