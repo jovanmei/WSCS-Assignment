@@ -8,3 +8,17 @@ Document: https://docs.google.com/document/d/1vmRyLAGnHboLolYdWpB8hqrVOGIXYYdh_8
 ```
 python==3.8
 ```
+
+## Run Urlkv
+
+1. Start redis server in terminal
+
+```
+$ redis-server
+```
+
+2. Run Urlkv.py
+
+```
+python3 Urlkv.py
+```
