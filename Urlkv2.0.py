@@ -12,13 +12,14 @@ app.config['REDIS_URL'] = 'redis://localhost:6379/0'
 # Connect to Redis database
 db = redis.Redis.from_url(app.config['REDIS_URL'])
 
+# the regex below is from the validators.py from django
 regex = re.compile(
-    r'^(?:http|ftp)s?://'  # http:// or https://
+    r'^(?:http|ftp)s?://'  # http:// or https:// or ftp(s)://
     r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
     r'localhost|'  # localhost...
     r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
-    r'(?::\d+)?'  # optional port
-    r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+    r'(?::\d+)?'  # optional port number
+    r'(?:/?|[/?]\S+)$', re.IGNORECASE)  # match the path and query string of the URL
 
 
 # URL class to store URL value and its hash
@@ -31,9 +32,9 @@ class Url:
     def hash_value(self):
         hasher = hashlib.sha256()
         hasher.update(self.value.encode('utf-8'))
-        timestamp = str(int(time.time()))[-5:]
-        short_hash = hasher.hexdigest()[:4]
-        return f"{timestamp}-{short_hash}"
+        timestamp = str(int(time.time()))[-2:]
+        short_hash = hasher.hexdigest()[:2]
+        return f"{timestamp}{short_hash}"
 
 
 # Check if the given URL is already in the database, return its hash if found
@@ -111,7 +112,7 @@ def update(hash):
     # Remove the old hash from the database and add the new one
     db.delete(hash)
     db.set(new_hash, new_value)
-    return jsonify({'value': new_value, 'hash': new_hash})
+    return jsonify({'value': new_value, 'hash': new_hash}), 200
     # else:
     #     # Invalid URL format
     #     return jsonify({'error': 'Invalid URL format'}), 400
