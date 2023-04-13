@@ -23,7 +23,7 @@ $ redis-server
 2. Run Urlkv.py
 
 ```
-python3 Urlkv.py
+python3 Urlkv2.0.py
 ```
 
 ## Regex expression
