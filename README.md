@@ -17,7 +17,7 @@ redis==4.5.4
 $ redis-server
 ```
 
-2. Run Urlkv.py
+2. Run Urlkv2.0.py
 
 ```
 python3 Urlkv2.0.py
