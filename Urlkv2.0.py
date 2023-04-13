@@ -1,6 +1,7 @@
 import hashlib
 import time
 import validators
+import re
 from flask import Flask, request, jsonify
 import redis
 
@@ -10,6 +11,15 @@ app = Flask(__name__)
 app.config['REDIS_URL'] = 'redis://localhost:6379/0'
 # Connect to Redis database
 db = redis.Redis.from_url(app.config['REDIS_URL'])
+
+regex = re.compile(
+    r'^(?:http|ftp)s?://'  # http:// or https://
+    r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
+    r'localhost|'  # localhost...
+    r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+    r'(?::\d+)?'  # optional port
+    r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+
 
 # URL class to store URL value and its hash
 class Url:
@@ -25,6 +35,7 @@ class Url:
         short_hash = hasher.hexdigest()[:4]
         return f"{timestamp}-{short_hash}"
 
+
 # Check if the given URL is already in the database, return its hash if found
 def get_existing_hash(url_value):
     for key in db.scan_iter():
@@ -32,28 +43,34 @@ def get_existing_hash(url_value):
             return key.decode('utf-8')
     return None
 
+
 # Create a new short URL
 @app.route('/', methods=['POST'])
 def create():
     value = request.json['value']
 
     # Validate the URL
-    if validators.url(value):
-        # Check if the URL already exists in the database
-        existing_hash = get_existing_hash(value)
-        if existing_hash:
-            # Return the existing hash with a warning message
-            return jsonify({'value': existing_hash, 'warning': 'URL already exists in the database'}), 200
-
-        # Create a new URL object and store it in the database
-        url = Url(value=value)
-        db.set(url.hash, url.value)
-
-        # Return the new hash
-        return jsonify({'value': url.hash}), 201
-    else:
-        # Invalid URL format
+    # if validators.url(value):
+    if not re.match(regex, value):
         return jsonify({'error': 'Invalid URL format'}), 400
+
+    # Check if the URL already exists in the database
+    existing_hash = get_existing_hash(value)
+    if existing_hash:
+        # Return the existing hash with a warning message
+        return jsonify({'value': existing_hash, 'warning': 'URL already exists in the database'}), 200
+
+    # Create a new URL object and store it in the database
+    url = Url(value=value)
+    db.set(url.hash, url.value)
+
+    # Return the new hash
+    return jsonify({'value': url.hash}), 201
+
+    # else:
+    #     # Invalid URL format
+    #     return jsonify({'error': 'Invalid URL format'}), 400
+
 
 # Get all short URLs
 @app.route('/', methods=['GET'])
@@ -63,6 +80,7 @@ def get_all():
     for key in db.scan_iter():
         output.append({'value': db.get(key).decode('utf-8'), 'hash': key.decode('utf-8')})
     return jsonify({'urls': output}), 200
+
 
 # Get the original URL for a short URL
 @app.route('/<hash>', methods=['GET'])
@@ -74,6 +92,7 @@ def get(hash):
     # Return the original URL and hash
     return jsonify({'value': value.decode('utf-8'), 'hash': hash}), 200
 
+
 # Update a short URL with a new URL
 @app.route('/<hash>', methods=['PUT'])
 def update(hash):
@@ -83,16 +102,20 @@ def update(hash):
         return jsonify({'message': 'URL not found'}), 404
     new_value = request.json['value']
     # Validate the new URL
-    if validators.url(new_value):
-        # Create a new hash for the updated URL
-        new_hash = Url(value=new_value).hash
-        # Remove the old hash from the database and add the new one
-        db.delete(hash)
-        db.set(new_hash, new_value)
-        return jsonify({'value': new_value, 'hash': new_hash})
-    else:
-        # Invalid URL format
+    # if validators.url(new_value):
+    if not re.match(regex, new_value):
         return jsonify({'error': 'Invalid URL format'}), 400
+
+    # Create a new hash for the updated URL
+    new_hash = Url(value=new_value).hash
+    # Remove the old hash from the database and add the new one
+    db.delete(hash)
+    db.set(new_hash, new_value)
+    return jsonify({'value': new_value, 'hash': new_hash})
+    # else:
+    #     # Invalid URL format
+    #     return jsonify({'error': 'Invalid URL format'}), 400
+
 
 # Delete a short URL
 @app.route('/<hash>', methods=['DELETE'])
@@ -105,12 +128,14 @@ def delete(hash):
     db.delete(hash)
     return '', 204
 
+
 # Delete all short URLs
 @app.route('/', methods=['DELETE'])
 def delete_all():
     # Flush the Redis database
     db.flushdb()
     return '', 204
+
 
 # Run the Flask application
 if __name__ == '__main__':
