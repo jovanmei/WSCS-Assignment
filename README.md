@@ -7,9 +7,9 @@ Document: https://docs.google.com/document/d/1vmRyLAGnHboLolYdWpB8hqrVOGIXYYdh_8
 
 ```
 python==3.8
-hashlib==
-flask==
-redis==
+hashlib==1.3.1
+flask==2.2.3
+redis==4.5.4
 ```
 
 ## Run Urlkv
