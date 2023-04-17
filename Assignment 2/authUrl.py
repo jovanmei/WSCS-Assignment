@@ -4,13 +4,72 @@ import validators
 import re
 from flask import Flask, request, jsonify
 import redis
+import jwt
+from flask_jwt_extended import (
+    JWTManager, create_access_token,
+    jwt_required, get_jwt_identity
+)
+
+from flask_sqlalchemy import SQLAlchemy
+import bcrypt
+from flask_jwt_extended import create_access_token
 
 # Create Flask application
 app = Flask(__name__)
+
 # Configure Redis connection
 app.config['REDIS_URL'] = 'redis://localhost:6379/0'
+
+# Configure JWT secret key
+app.config['JWT_SECRET_KEY'] = 'super-secret' # Replace with your own secret key
+
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///auth.db"
+sdb = SQLAlchemy(app)
+
+# Initialize JWTManager
+jwt = JWTManager(app)
+
 # Connect to Redis database
 db = redis.Redis.from_url(app.config['REDIS_URL'])
+
+
+class User(sdb.Model):
+    id = sdb.Column(sdb.Integer, primary_key=True)
+    username = sdb.Column(sdb.String(80), unique=True, nullable=False)
+    password = sdb.Column(sdb.String(255), nullable=False)
+
+
+@app.route("/register", methods=["POST"])
+def register():
+    username = request.json["username"]
+    password = request.json["password"]
+
+    # Check if the user already exists
+    existing_user = User.query.filter_by(username=username).first()
+    if existing_user:
+        return jsonify({"message": "Duplicate"}), 409
+
+    hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+
+    user = User(username=username, password=hashed_password)
+    sdb.session.add(user)
+    sdb.session.commit()
+
+    return jsonify({"message": "Successfully registered"}), 201
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    username = request.json["username"]
+    password = request.json["password"]
+    user = User.query.filter_by(username=username).first()
+
+    if user and bcrypt.checkpw(password.encode("utf-8"), user.password):
+        access_token = create_access_token(identity=user.id)
+        return jsonify({"access_token": access_token}), 200
+
+    return jsonify({"message": "forbidden"}), 403
+
 
 # the regex below is from the validators.py from django
 regex = re.compile(
@@ -47,11 +106,11 @@ def get_existing_hash(url_value):
 
 # Create a new short URL
 @app.route('/', methods=['POST'])
+@jwt_required()
 def create():
     value = request.json['value']
 
     # Validate the URL
-    # if validators.url(value):
     if not re.match(regex, value):
         return jsonify({'error': 'Invalid URL format'}), 400
 
@@ -68,13 +127,10 @@ def create():
     # Return the new hash
     return jsonify({'value': url.hash}), 201
 
-    # else:
-    #     # Invalid URL format
-    #     return jsonify({'error': 'Invalid URL format'}), 400
-
 
 # Get all short URLs
 @app.route('/', methods=['GET'])
+@jwt_required()
 def get_all():
     output = []
     # Iterate through the database keys and append the URL values and hashes to the output
@@ -82,9 +138,9 @@ def get_all():
         output.append({'value': db.get(key).decode('utf-8'), 'hash': key.decode('utf-8')})
     return jsonify({'urls': output}), 200
 
-
 # Get the original URL for a short URL
 @app.route('/<hash>', methods=['GET'])
+@jwt_required()
 def get(hash):
     value = db.get(hash)
     if not value:
@@ -96,6 +152,7 @@ def get(hash):
 
 # Update a short URL with a new URL
 @app.route('/<hash>', methods=['PUT'])
+@jwt_required()
 def update(hash):
     value = db.get(hash)
     if not value:
@@ -103,7 +160,6 @@ def update(hash):
         return jsonify({'message': 'URL not found'}), 404
     new_value = request.json['value']
     # Validate the new URL
-    # if validators.url(new_value):
     if not re.match(regex, new_value):
         return jsonify({'error': 'Invalid URL format'}), 400
 
@@ -113,13 +169,11 @@ def update(hash):
     db.delete(hash)
     db.set(new_hash, new_value)
     return jsonify({'value': new_value, 'hash': new_hash}), 200
-    # else:
-    #     # Invalid URL format
-    #     return jsonify({'error': 'Invalid URL format'}), 400
 
 
 # Delete a short URL
 @app.route('/<hash>', methods=['DELETE'])
+@jwt_required()
 def delete(hash):
     value = db.get(hash)
     if not value:
@@ -132,6 +186,7 @@ def delete(hash):
 
 # Delete all short URLs
 @app.route('/', methods=['DELETE'])
+@jwt_required()
 def delete_all():
     # Flush the Redis database
     db.flushdb()
@@ -140,4 +195,6 @@ def delete_all():
 
 # Run the Flask application
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Mac OSX Monterey (12.x) currently uses ports 5000 and 7000 for its Control centre hence the issue.
+    # So just run the app from port other than 5000 and 7000
+    app.run(debug=True, port=8000)
