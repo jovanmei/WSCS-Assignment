@@ -21,7 +21,7 @@ app = Flask(__name__)
 app.config['REDIS_URL'] = 'redis://localhost:6379/0'
 
 # Configure JWT secret key
-app.config['JWT_SECRET_KEY'] = 'super-secret' # Replace with your own secret key
+app.config['JWT_SECRET_KEY'] = 'super-secret'  # Replace with your own secret key
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///auth.db"
 sdb = SQLAlchemy(app)
@@ -69,6 +69,30 @@ def login():
         return jsonify({"access_token": access_token}), 200
 
     return jsonify({"message": "forbidden"}), 403
+
+
+@app.route("/update", methods=["PUT"])
+def update_password():
+    username = request.json["username"]
+    old_password = request.json["old_password"]
+    new_password = request.json["new_password"]
+
+    user = User.query.filter_by(username=username).first()
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    # Check if old password is correct
+    if not bcrypt.checkpw(old_password.encode("utf-8"), user.password):
+        return jsonify({"message": "Forbidden"}), 403
+
+    # Hash the new password and update the user object
+    hashed_password = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt())
+    user.password = hashed_password
+
+    # Commit changes to the database
+    sdb.session.commit()
+
+    return jsonify({"message": "Password updated successfully"}), 200
 
 
 # the regex below is from the validators.py from django
@@ -137,6 +161,7 @@ def get_all():
     for key in db.scan_iter():
         output.append({'value': db.get(key).decode('utf-8'), 'hash': key.decode('utf-8')})
     return jsonify({'urls': output}), 200
+
 
 # Get the original URL for a short URL
 @app.route('/<hash>', methods=['GET'])
