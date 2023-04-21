@@ -55,7 +55,7 @@ class Url(sdb.Model):
         return f"{timestamp}{short_hash}"
 
 
-@app.route("/register", methods=["POST"])
+@app.route("/users", methods=["POST"])
 def register():
     username = request.json["username"]
     password = request.json["password"]
@@ -74,7 +74,7 @@ def register():
     return jsonify({"message": "Successfully registered"}), 201
 
 
-@app.route("/login", methods=["POST"])
+@app.route("/users/login", methods=["POST"])
 def login():
     username = request.json["username"]
     password = request.json["password"]
@@ -84,7 +84,7 @@ def login():
         access_token = create_access_token(identity=user.id)
         return jsonify({"access_token": access_token}), 200
 
-    return jsonify({"message": "forbidden"}), 403
+    return jsonify({"message": "(forbidden)Wrong password"}), 403
 
 
 # the regex below is from the validators.py from django
@@ -96,6 +96,42 @@ regex = re.compile(
     r'(?::\d+)?'  # optional port number
     r'(?:/?|[/?]\S+)$', re.IGNORECASE)  # match the path and query string of the URL
 
+
+#Change the password
+@app.route("/users", methods=["PUT"])
+@jwt_required()
+def update_password():
+    #jwt authentication(only the person who login can change his password)
+    user_id = get_jwt_identity()
+    username = request.json["username"]
+    old_password = request.json["old-password"]
+    new_password = request.json["new-password"]
+
+    user = User.query.filter_by(username=username).first()
+    # Check if the current user is authorized
+    if user.id != user_id:
+        return jsonify({"message": "Unauthorized user"}), 401
+    # Check if the user exists
+    if not user:
+        return jsonify({"message": "User not found"}), 404
+
+    # Check if the old password is correct
+    if not bcrypt.checkpw(old_password.encode("utf-8"), user.password):
+        return jsonify({"message": "(forbidden)Incorrect password"}), 403
+
+    # Check if the new password is the same as the old password
+    if old_password == new_password:
+        return jsonify({"message": "New password cannot be the same as old one"}), 400
+
+
+
+    # Hash and update the new password
+    hashed_password = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt())
+    user.password = hashed_password
+
+    sdb.session.commit()
+
+    return jsonify({"message": "Password updated successfully"}), 200
 
 # Create a new short URL
 @app.route('/', methods=['POST'])
