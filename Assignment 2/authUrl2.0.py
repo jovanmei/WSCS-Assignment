@@ -1,9 +1,7 @@
 import hashlib
 import time
-import validators
 import re
 from flask import Flask, request, jsonify
-import redis
 import jwt
 from flask_jwt_extended import (
     JWTManager, create_access_token,
@@ -46,7 +44,7 @@ class Url(sdb.Model):
         self.user_id = user_id
 
     # Generate a unique hash based on the URL value and current timestamp
-   
+
     def hash_value(self):
         hasher = hashlib.sha256()
         hasher.update(self.value.encode('utf-8'))
@@ -87,21 +85,11 @@ def login():
     return jsonify({"message": "(forbidden)Wrong password"}), 403
 
 
-# the regex below is from the validators.py from django
-regex = re.compile(
-    r'^(?:http|ftp)s?://'  # http:// or https:// or ftp(s)://
-    r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  #
-    r'localhost|'  # localhost...
-    r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
-    r'(?::\d+)?'  # optional port number
-    r'(?:/?|[/?]\S+)$', re.IGNORECASE)  # match the path and query string of the URL
-
-
-#Change the password
+# Change the password
 @app.route("/users", methods=["PUT"])
 @jwt_required()
 def update_password():
-    #jwt authentication(only the person who login can change his password)
+    # jwt authentication(only the person who login can change his password)
     user_id = get_jwt_identity()
     username = request.json["username"]
     old_password = request.json["old-password"]
@@ -123,8 +111,6 @@ def update_password():
     if old_password == new_password:
         return jsonify({"message": "New password cannot be the same as old one"}), 400
 
-
-
     # Hash and update the new password
     hashed_password = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt())
     user.password = hashed_password
@@ -132,6 +118,17 @@ def update_password():
     sdb.session.commit()
 
     return jsonify({"message": "Password updated successfully"}), 200
+
+
+# the regex below is from the validators.py from django
+regex = re.compile(
+    r'^(?:http|ftp)s?://'  # http:// or https:// or ftp(s)://
+    r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  #
+    r'localhost|'  # localhost...
+    r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+    r'(?::\d+)?'  # optional port number
+    r'(?:/?|[/?]\S+)$', re.IGNORECASE)  # match the path and query string of the URL
+
 
 # Create a new short URL
 @app.route('/', methods=['POST'])
