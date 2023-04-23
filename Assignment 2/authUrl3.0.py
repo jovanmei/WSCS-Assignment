@@ -158,15 +158,14 @@ def update_password():
     new_password = request.json["new-password"]
 
     user = User.query.filter_by(username=username).first()
-    # Check if the current user is authorized
-    if user is None:
-        return jsonify({"message": "User is not exist"}), 400
 
-    if user.id != user_id:
-        return jsonify({"message": "Unauthorized user"}), 401
     # Check if the user exists
     if not user:
         return jsonify({"message": "User not found"}), 404
+
+    # Check if the current user is authorized
+    if user.id != user_id:
+        return jsonify({"message": "Unauthorized user"}), 401
 
     # Check if the old password is correct
     if not bcrypt.checkpw(old_password.encode("utf-8"), user.password):
