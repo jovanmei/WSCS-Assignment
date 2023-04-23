@@ -159,6 +159,9 @@ def update_password():
 
     user = User.query.filter_by(username=username).first()
     # Check if the current user is authorized
+    if user is None:
+        return jsonify({"message": "User is not exist"}), 400
+
     if user.id != user_id:
         return jsonify({"message": "Unauthorized user"}), 401
     # Check if the user exists
