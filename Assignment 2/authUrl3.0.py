@@ -242,7 +242,7 @@ def get_all():
     # Iterate through the user's URLs and append the URL values and hashes to the output
     for url in User.query.get(user_id).urls:
         output.append({'value': url.value, 'hash': url.hash})
-    return jsonify({'urls': output}), 200
+    return jsonify({'urls': output}), 301
 
 
 # Get the original URL for a short URL
@@ -263,7 +263,7 @@ def get(hash):
         # URL not found
         return jsonify({'message': 'URL not found'}), 404
     # Return the original URL and hash
-    return jsonify({'value': url.value, 'hash': hash}), 200
+    return jsonify({'value': url.value, 'hash': hash}), 301
 
 
 # Update a short URL with a new URL
