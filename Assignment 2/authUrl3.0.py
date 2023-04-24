@@ -1,10 +1,7 @@
-import hashlib
 import json
 import time
-import validators
 import re
 from flask import Flask, request, jsonify
-import redis
 from flask_sqlalchemy import SQLAlchemy
 import bcrypt
 import base64
@@ -140,18 +137,18 @@ def login():
 # Change the password
 @app.route("/users", methods=["PUT"])
 def update_password():
-    # jwt authentication(only the person who login can change his password)
+    # jwt authentication (only the person who login can change his password)
     # Get token from header
     token = request.headers.get("Authorization")
 
     if not token:
-        return jsonify({"message": "Token not provided"}), 401
+        return jsonify({"message": "Token not provided"}), 403
 
     # Verify token
     try:
         payload = verify_jwt_token(token)
     except Exception as e:
-        return jsonify({"message": "Invalid token"}), 401
+        return jsonify({"message": "Invalid token"}), 403
     user_id = payload["id"]
     username = request.json["username"]
     old_password = request.json["old-password"]
@@ -199,13 +196,13 @@ regex = re.compile(
 def create():
     token = request.headers.get("Authorization")
     if not token:
-        return jsonify({"message": "Token not provided"}), 401
+        return jsonify({"message": "Token not provided"}), 403
 
     # Verify token
     try:
         payload = verify_jwt_token(token)
     except Exception as e:
-        return jsonify({"message": "Invalid token"}), 401
+        return jsonify({"message": "Invalid token"}), 403
     user_id = payload["id"]
     value = request.json['value']
 
@@ -233,13 +230,13 @@ def create():
 def get_all():
     token = request.headers.get("Authorization")
     if not token:
-        return jsonify({"message": "Token not provided"}), 401
+        return jsonify({"message": "Token not provided"}), 403
 
     # Verify token
     try:
         payload = verify_jwt_token(token)
     except Exception as e:
-        return jsonify({"message": "Invalid token"}), 401
+        return jsonify({"message": "Invalid token"}), 403
     user_id = payload["id"]
     output = []
     # Iterate through the user's URLs and append the URL values and hashes to the output
@@ -253,13 +250,13 @@ def get_all():
 def get(hash):
     token = request.headers.get("Authorization")
     if not token:
-        return jsonify({"message": "Token not provided"}), 401
+        return jsonify({"message": "Token not provided"}), 403
 
     # Verify token
     try:
         payload = verify_jwt_token(token)
     except Exception as e:
-        return jsonify({"message": "Invalid token"}), 401
+        return jsonify({"message": "Invalid token"}), 403
     user_id = payload["id"]
     url = Url.query.filter_by(hash=hash, user_id=user_id).first()
     if not url:
@@ -274,13 +271,13 @@ def get(hash):
 def update(hash):
     token = request.headers.get("Authorization")
     if not token:
-        return jsonify({"message": "Token not provided"}), 401
+        return jsonify({"message": "Token not provided"}), 403
 
     # Verify token
     try:
         payload = verify_jwt_token(token)
     except Exception as e:
-        return jsonify({"message": "Invalid token"}), 401
+        return jsonify({"message": "Invalid token"}), 403
     user_id = payload["id"]
     url = Url.query.filter_by(hash=hash, user_id=user_id).first()
     if not url:
@@ -312,13 +309,13 @@ def update(hash):
 def delete(hash):
     token = request.headers.get("Authorization")
     if not token:
-        return jsonify({"message": "Token not provided"}), 401
+        return jsonify({"message": "Token not provided"}), 403
 
     # Verify token
     try:
         payload = verify_jwt_token(token)
     except Exception as e:
-        return jsonify({"message": "Invalid token"}), 401
+        return jsonify({"message": "Invalid token"}), 403
     user_id = payload["id"]
     url = Url.query.filter_by(hash=hash, user_id=user_id).first()
     if not url:
@@ -335,13 +332,13 @@ def delete(hash):
 def delete_all():
     token = request.headers.get("Authorization")
     if not token:
-        return jsonify({"message": "Token not provided"}), 401
+        return jsonify({"message": "Token not provided"}), 403
 
     # Verify token
     try:
         payload = verify_jwt_token(token)
     except Exception as e:
-        return jsonify({"message": "Invalid token"}), 401
+        return jsonify({"message": "Invalid token"}), 403
     user_id = payload["id"]
     # Delete all URLs for the current user
     Url.query.filter_by(user_id=user_id).delete()
