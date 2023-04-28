@@ -1,0 +1,9 @@
+version: "3.8"
+
+services:
+  app:
+    build: .
+    expose:
+      - 5001
+    ports:
+      - "5001:5001"
