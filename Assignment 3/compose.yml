@@ -8,7 +8,10 @@ services:
     ports:
       - "5001:5001"
     volumes:
-      - db-data:/app/db
+      - db-data:/app/instance
+    environment:
+      - FLASK_APP=myapp
+      - FLASK_ENV=development
     restart: always
 
 volumes:

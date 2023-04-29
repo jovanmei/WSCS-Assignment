@@ -60,12 +60,12 @@ def verify_jwt_token(token):
 
 
 # Create Flask application
-app = Flask(__name__)
+app = Flask(__name__, instance_path='/app/instance')
 
 # Configure JWT secret key
 app.config['JWT_SECRET_KEY'] = 'super-secret'  # Replace with your own secret key
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:////app/db/auth.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:////app/instance/auth.db"
 sdb = SQLAlchemy(app)
 
 
