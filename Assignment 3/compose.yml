@@ -7,3 +7,9 @@ services:
       - 5001
     ports:
       - "5001:5001"
+    volumes:
+      - db-data:/app/db
+    restart: always
+
+volumes:
+  db-data:
