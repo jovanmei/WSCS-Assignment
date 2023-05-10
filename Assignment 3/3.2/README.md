@@ -12,7 +12,9 @@ Apply the configuration file
 kubectl apply -f /opt/deployment.yaml
 kubectl apply -f /opt/services.yaml
 ```
-Stop the work pods
+Then the app will be launched in `http://145.100.135.195:30001/`
+
+Stop the work pods to run below
 ```
 kubectl scale deployment flask-app --replicas=0
 ```
