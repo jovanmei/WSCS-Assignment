@@ -1,19 +1,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: app-deployment
+  name: flask-app
 spec:
   replicas: 3
   selector:
     matchLabels:
-      app: app
+      app: flask-app
   template:
     metadata:
       labels:
-        app: app
+        app: flask-app
     spec:
       containers:
-      - name: app
+      - name: flask-app
         image: jovanmei/app:v1
+        imagePullPolicy: Always
         ports:
         - containerPort: 5001
+        env:
+        - name: SQLALCHEMY_DATABASE_URI
+          value: postgresql://wirvdajm:1hV8nCETijboyuAfkD299HkaWHwA20j_@balarama.db.elephantsql.com/wirvdajm
+        - name: SQLALCHEMY_TRACK_MODIFICATIONS
+          value: "False"
